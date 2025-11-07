@@ -13,7 +13,7 @@ export default function Navbar() {
   return (
     <nav className="w-full px-6 py-4 md:px-12 bg-background-dark shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <h1 className="text-2xl md:text-3xl font-serif font-bold text-text-light">
+        <h1 className="text-xl md:text-3xl font-serif font-bold text-text-light">
           Pour & Whisk
         </h1>
 
