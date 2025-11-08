@@ -5,7 +5,7 @@ import coldBrewImage from '../assets/images/cold-brew.png'
 
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)
-  
+
   // Sample drink data - you can replace with actual images later
   const favorites = [
     { name: 'Ceremorial Matcha', image: ceremorialMatchaImage },
@@ -19,7 +19,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative w-full h-[70vh] md:h-[80vh] overflow-hidden">
         {/* Background Image */}
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: `url(${matchaCoffeeImage})`
@@ -28,7 +28,7 @@ export default function HomePage() {
           {/* Overlay */}
           <div className="absolute inset-0 bg-black/40"></div>
         </div>
-        
+
         {/* Text Overlay */}
         <div className="relative h-full flex flex-col items-center justify-center text-center px-6">
           <h2 className="text-4xl md:text-7xl lg:text-8xl font-serif font-bold text-text-light mb-4 md:mb-6">
@@ -46,7 +46,7 @@ export default function HomePage() {
           <h3 className="text-3xl md:text-4xl font-serif font-bold text-favorites text-center mb-8 md:mb-12">
             Our Favorites
           </h3>
-          
+
           {/* Drink Carousel */}
           <div className="relative mb-10 md:mb-12">
             {/* Carousel Container */}
@@ -64,19 +64,19 @@ export default function HomePage() {
                   />
                 ))}
               </div>
-              <div 
+              <div
                 className="flex transition-transform duration-500 ease-in-out"
                 style={{ transform: `translateX(-${currentSlide * 100}%)` }}
               >
                 {favorites.map((drink, index) => (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className="min-w-full md:min-w-[50%] lg:min-w-[25%] px-2"
                   >
                     <div className="group cursor-pointer transform transition-transform hover:scale-105">
                       <div className="aspect-square rounded-lg overflow-hidden mb-3 shadow-lg">
-                        <img 
-                          src={drink.image} 
+                        <img
+                          src={drink.image}
                           alt={drink.name}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         />
@@ -90,13 +90,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-
-          {/* Explore Menu Button */}
-          <div className="text-center">
-            <button className="w-full bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-2 px-5 md:py-4 md:px-12 rounded-lg text-base md:text-lg transition-colors duration-200 shadow-lg hover:shadow-xl">
-              Explore our menu
-            </button>
-          </div>
         </div>
       </section>
 
@@ -106,7 +99,7 @@ export default function HomePage() {
           <h3 className="text-3xl md:text-4xl font-serif font-bold text-favorites text-center mb-8 md:mb-12">
             Visit Us
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
             {/* Location */}
             <div className="text-center">
@@ -180,3 +173,4 @@ export default function HomePage() {
     </>
   )
 }
+
