@@ -1,6 +1,7 @@
 import Menu from '../components/Menu'
 import ceremorialMatchaImage from '../assets/images/ceremorial-matcha.png'
 import coldBrewImage from '../assets/images/cold-brew.png'
+import croissantImage from '../assets/images/croissant.jpg'
 
 const matchaItems = [
   { name: 'Ceremorial Matcha', image: ceremorialMatchaImage, description: 'A sweet and creamy matcha latte with a hint of sweetness.', price: '$5.99' },
@@ -22,8 +23,8 @@ const seasonalItems = [
 ]
 
 const pastriesItems = [
-  { name: 'Croissant', image: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=400&fit=crop', description: 'Flaky, buttery pastry.', price: '$4.50' },
-  { name: 'Blueberry Muffin', image: 'https://images.unsplash.com/photo-1592659762303-411976379172?w=400&h=400&fit=crop', description: 'Sweet muffin with fresh blueberries.', price: '$3.75' },
+  { name: 'Croissant', image: croissantImage, description: 'Flaky, buttery pastry.', price: '$4.50' },
+  { name: 'Blueberry Muffin', image: 'https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=400&h=400&fit=crop', description: 'Sweet muffin with fresh blueberries.', price: '$3.75' },
   { name: 'Chocolate Chip Cookie', image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=400&h=400&fit=crop', description: 'Classic cookie with chocolate chips.', price: '$2.50' },
 ]
 

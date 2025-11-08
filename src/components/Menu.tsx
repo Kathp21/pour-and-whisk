@@ -49,17 +49,17 @@ export default function Menu({ matchaItems, coffeeItems, seasonalItems, pastries
         </div>
 
         {/* Menu Items */}
-        <div key={activeCategory} className="space-y-6 animate-fadeIn">
+        <div key={activeCategory} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 animate-fadeIn">
           {currentItems.map((item, index) => (
             <div
               key={`${activeCategory}-${index}`}
               className="group cursor-pointer animate-slideIn"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              {/* Container: Image, Title, and Description */}
-              <div className="flex flex-row gap-4 md:gap-6 items-start">
+              {/* Mobile: Horizontal Layout */}
+              <div className="flex flex-row gap-4 md:gap-6 items-start md:hidden">
                 {/* Image */}
-                <div className="w-16 md:w-32 lg:w-40 aspect-square rounded-lg overflow-hidden shadow-lg flex-shrink-0">
+                <div className="w-16 md:w-32 aspect-square rounded-lg overflow-hidden shadow-lg flex-shrink-0">
                   <img
                     src={item.image}
                     alt={item.name}
@@ -80,8 +80,8 @@ export default function Menu({ matchaItems, coffeeItems, seasonalItems, pastries
                 </div>
               </div>
 
-              {/* Price and Plus Icon - Same line */}
-              <div className="flex items-center justify-between mt-2 ml-[calc(4rem+1rem)] md:ml-[calc(8rem+1.5rem)] lg:ml-[calc(10rem+1.5rem)]">
+              {/* Mobile: Price and Plus Icon */}
+              <div className="flex items-center justify-between mt-2 ml-[calc(4rem+1rem)] md:ml-[calc(8rem+1.5rem)] md:hidden">
                 {item.price && (
                   <p className="text-base md:text-lg font-semibold text-favorites">
                     {item.price}
@@ -95,6 +95,47 @@ export default function Menu({ matchaItems, coffeeItems, seasonalItems, pastries
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
+              </div>
+
+              {/* Tablet & Desktop: Vertical Layout */}
+              <div className="hidden md:flex flex-col items-center text-center">
+                {/* Image */}
+                <div className="w-full max-w-[200px] md:max-w-[180px] lg:max-w-[200px] aspect-square rounded-lg overflow-hidden shadow-lg mb-4">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-lg md:text-xl lg:text-xl font-medium text-text-light mb-2">
+                  {item.name}
+                </h3>
+
+                {/* Description */}
+                {item.description && (
+                  <p className="text-sm md:text-base text-text-light/60 mb-3 px-2 w-full max-w-[200px] md:max-w-[180px] lg:max-w-[200px]">
+                    {item.description}
+                  </p>
+                )}
+
+                {/* Price and Plus Icon */}
+                <div className="flex items-center justify-center gap-4 mt-2">
+                  {item.price && (
+                    <p className="text-base md:text-lg font-semibold text-favorites">
+                      {item.price}
+                    </p>
+                  )}
+                  <button
+                    className="flex-shrink-0 w-10 h-10 md:w-10 md:h-10 rounded-full border-2 border-text-light/30 hover:border-favorites text-text-light hover:text-favorites transition-colors flex items-center justify-center"
+                    aria-label={`Add ${item.name} to cart`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
