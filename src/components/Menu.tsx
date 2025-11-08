@@ -32,15 +32,15 @@ export default function Menu({ matchaItems, coffeeItems, seasonalItems, pastries
     <section className="py-12 md:py-20 px-6 md:px-12">
       <div className="max-w-7xl mx-auto">
         {/* Horizontal Menu Options */}
-        <div className="flex justify-start gap-2 md:gap-8 mb-8 md:mb-12 overflow-x-auto scrollbar-hide">
+        <div className="flex justify-start gap-4 md:gap-8 mb-8 md:mb-12 overflow-x-auto scrollbar-hide">
           {(['Matcha', 'Coffee', 'Seasonal', 'Pastries'] as Category[]).map((category) => (
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
-              className={`px-3 md:px-6 py-2 md:py-3 text-sm md:text-lg font-medium transition-colors rounded-lg whitespace-nowrap flex-shrink-0 ${
+              className={`text-sm md:text-lg font-medium transition-all duration-300 ease-in-out whitespace-nowrap flex-shrink-0 pb-2 ${
                 activeCategory === category
-                  ? 'bg-favorites text-background-dark'
-                  : 'text-text-light hover:text-favorites hover:bg-white/10'
+                  ? 'text-text-light border-b-2 border-button-primary'
+                  : 'text-text-light hover:text-favorites border-b-2 border-transparent'
               }`}
             >
               {category}
@@ -49,11 +49,12 @@ export default function Menu({ matchaItems, coffeeItems, seasonalItems, pastries
         </div>
 
         {/* Menu Items */}
-        <div className="space-y-6">
+        <div key={activeCategory} className="space-y-6 animate-fadeIn">
           {currentItems.map((item, index) => (
             <div
-              key={index}
-              className="group cursor-pointer"
+              key={`${activeCategory}-${index}`}
+              className="group cursor-pointer animate-slideIn"
+              style={{ animationDelay: `${index * 50}ms` }}
             >
               {/* Container: Image, Title, and Description */}
               <div className="flex flex-row gap-4 md:gap-6 items-start">
