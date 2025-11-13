@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface MenuItem {
   id: string
@@ -48,6 +49,7 @@ function formatPrice(item: MenuItem): string {
 }
 
 export default function Menu() {
+  const navigate = useNavigate()
   const [activeCategory, setActiveCategory] = useState<Category>('Matcha')
   const [matchaItems, setMatchaItems] = useState<MenuItem[]>([])
   const [coffeeItems, setCoffeeItems] = useState<MenuItem[]>([])
@@ -194,6 +196,7 @@ export default function Menu() {
               key={`${activeCategory}-${index}`}
               className="group cursor-pointer animate-slideIn"
               style={{ animationDelay: `${index * 50}ms` }}
+              onClick={() => navigate(`/menu/customize/${item.id}`)}
             >
               {/* Mobile: Horizontal Layout */}
               <div className="flex flex-row gap-4 md:gap-6 items-start md:hidden">
@@ -227,6 +230,10 @@ export default function Menu() {
                   </p>
                 )}
                 <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // TODO: Add to cart functionality
+                  }}
                   className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-text-light/30 hover:border-favorites text-text-light hover:text-favorites transition-colors flex items-center justify-center"
                   aria-label={`Add ${item.name} to cart`}
                 >
