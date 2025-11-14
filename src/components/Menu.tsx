@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useCart } from '../contexts/CartContext'
 
 interface MenuItem {
   id: string
@@ -50,6 +51,7 @@ function formatPrice(item: MenuItem): string {
 
 export default function Menu() {
   const navigate = useNavigate()
+  const { cartItems } = useCart()
   const [activeCategory, setActiveCategory] = useState<Category>('Matcha')
   const [matchaItems, setMatchaItems] = useState<MenuItem[]>([])
   const [coffeeItems, setCoffeeItems] = useState<MenuItem[]>([])
@@ -58,6 +60,13 @@ export default function Menu() {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Get total quantity for a specific menu item in the cart
+  function getItemQuantity(itemId: string): number {
+    return cartItems
+      .filter(item => item.drinkId === itemId)
+      .reduce((total, item) => total + item.quantity, 0)
+  }
+
   useEffect(() => {
     async function fetchMenuData() {
       try {
@@ -65,7 +74,7 @@ export default function Menu() {
         setError(null)
         
         const url = API_BASE_URL ? `${API_BASE_URL}/menu` : '/menu'
-        console.log('Fetching menu from:', url)
+
         const response = await fetch(url)
         
         if (!response.ok) {
@@ -201,12 +210,18 @@ export default function Menu() {
               {/* Mobile: Horizontal Layout */}
               <div className="flex flex-row gap-4 md:gap-6 items-start md:hidden">
                 {/* Image */}
-                <div className="w-16 md:w-32 aspect-square rounded-lg overflow-hidden shadow-lg flex-shrink-0">
+                <div className="relative w-16 md:w-32 aspect-square rounded-lg overflow-hidden shadow-lg flex-shrink-0">
                   <img
                     src={item.image_url}
                     alt={item.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
+                  {/* Quantity Badge Overlay */}
+                  {getItemQuantity(item.id) > 0 && (
+                    <span className="absolute top-1 right-1 bg-favorites text-background-dark text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-lg">
+                      {getItemQuantity(item.id) > 99 ? '99+' : getItemQuantity(item.id)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Title and Description */}
@@ -246,12 +261,18 @@ export default function Menu() {
               {/* Tablet & Desktop: Vertical Layout */}
               <div className="hidden md:flex flex-col items-center text-center">
                 {/* Image */}
-                <div className="w-full max-w-[200px] md:max-w-[180px] lg:max-w-[200px] aspect-square rounded-lg overflow-hidden shadow-lg mb-4">
+                <div className="relative w-full max-w-[200px] md:max-w-[180px] lg:max-w-[200px] aspect-square rounded-lg overflow-hidden shadow-lg mb-4">
                   <img
                     src={item.image_url}
                     alt={item.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
+                  {/* Quantity Badge Overlay */}
+                  {getItemQuantity(item.id) > 0 && (
+                    <span className="absolute top-2 right-2 bg-favorites text-background-dark text-base font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+                      {getItemQuantity(item.id) > 99 ? '99+' : getItemQuantity(item.id)}
+                    </span>
+                  )}
                 </div>
 
                 {/* Title */}

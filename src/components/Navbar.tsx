@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useCart } from '../contexts/CartContext'
 
 const navLinks = [
   { name: 'Home', href: '#' },
@@ -10,6 +11,8 @@ const navLinks = [
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { getCartItemCount } = useCart()
+  const cartItemCount = getCartItemCount()
 
   return (
     <nav className="w-full px-6 py-4 md:px-12 bg-background-dark shadow-sm sticky top-0 z-50">
@@ -31,10 +34,15 @@ export default function Navbar() {
           ))}
           
           {/* Desktop Cart Icon */}
-          <Link to="/cart" className="p-2 text-text-light hover:text-white focus:outline-none transition-colors" aria-label="Shopping cart">
+          <Link to="/cart" className="relative p-2 text-text-light hover:text-white focus:outline-none transition-colors" aria-label="Shopping cart">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
+            {cartItemCount > 0 && (
+              <span className="absolute top-0 right-0 bg-favorites text-background-dark text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {cartItemCount > 99 ? '99+' : cartItemCount}
+              </span>
+            )}
           </Link>
           
           {/* Desktop Order Now Button */}
@@ -46,10 +54,15 @@ export default function Navbar() {
         {/* Mobile Cart and Burger */}
         <div className="md:hidden flex items-center space-x-4">
           {/* Mobile Cart Icon */}
-          <Link to="/cart" className="p-2 text-text-light focus:outline-none" aria-label="Shopping cart">
+          <Link to="/cart" className="relative p-2 text-text-light focus:outline-none" aria-label="Shopping cart">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
+            {cartItemCount > 0 && (
+              <span className="absolute top-0 right-0 bg-favorites text-background-dark text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {cartItemCount > 99 ? '99+' : cartItemCount}
+              </span>
+            )}
           </Link>
           
           {/* Mobile Burger Button */}
