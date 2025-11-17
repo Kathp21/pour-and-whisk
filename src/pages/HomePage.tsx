@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import matchaCoffeeImage from '../assets/images/matcha-coffee.png'
 import ceremorialMatchaImage from '../assets/images/ceremorial-matcha.png'
 import coldBrewImage from '../assets/images/cold-brew.png'
 
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [itemsPerView, setItemsPerView] = useState(1)
 
   // Sample drink data - you can replace with actual images later
   const favorites = [
@@ -13,6 +14,46 @@ export default function HomePage() {
     { name: 'Cappuccino', image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&h=400&fit=crop' },
     { name: 'Cold Brew', image: coldBrewImage },
   ]
+
+  // Calculate items per view based on screen size
+  useEffect(() => {
+    function updateItemsPerView() {
+      let newItemsPerView = 1
+      if (window.innerWidth >= 1024) {
+        // Desktop: 4 items per view
+        newItemsPerView = 4
+      } else if (window.innerWidth >= 768) {
+        // Tablet: 2 items per view
+        newItemsPerView = 2
+      } else {
+        // Mobile: 1 item per view
+        newItemsPerView = 1
+      }
+      
+      setItemsPerView(newItemsPerView)
+    }
+
+    updateItemsPerView()
+    window.addEventListener('resize', updateItemsPerView)
+    return () => window.removeEventListener('resize', updateItemsPerView)
+  }, [])
+
+  // Reset current slide if it's out of bounds when itemsPerView changes
+  useEffect(() => {
+    const newTotalSlides = Math.ceil(favorites.length / itemsPerView)
+    setCurrentSlide(prevSlide => {
+      if (prevSlide >= newTotalSlides && newTotalSlides > 0) {
+        return Math.max(0, newTotalSlides - 1)
+      }
+      return prevSlide
+    })
+  }, [itemsPerView, favorites.length])
+
+  // Calculate total number of slides
+  const totalSlides = Math.ceil(favorites.length / itemsPerView)
+
+  // Calculate transform percentage - move by full viewport width per slide
+  const transformPercentage = currentSlide * 100
 
   return (
     <>
@@ -51,22 +92,24 @@ export default function HomePage() {
           <div className="relative mb-10 md:mb-12">
             {/* Carousel Container */}
             <div className="relative overflow-hidden">
-              {/* Slide Indicators - Overlay on Images */}
-              <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex justify-center gap-2">
-                {favorites.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentSlide(index)}
-                    className={`h-2 rounded-full transition-all ${
-                      index === currentSlide ? 'w-8 bg-favorites' : 'w-2 bg-text-light/30'
-                    }`}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
+              {/* Slide Indicators - Overlay on Images (hidden on desktop) */}
+              {itemsPerView < 4 && (
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex justify-center gap-2">
+                  {Array.from({ length: totalSlides }).map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`h-2 rounded-full transition-all ${
+                        index === currentSlide ? 'w-8 bg-favorites' : 'w-2 bg-text-light/30'
+                      }`}
+                      aria-label={`Go to slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
               <div
                 className="flex transition-transform duration-500 ease-in-out"
-                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                style={{ transform: `translateX(-${transformPercentage}%)` }}
               >
                 {favorites.map((drink, index) => (
                   <div

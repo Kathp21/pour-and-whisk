@@ -5,6 +5,8 @@ import HomePage from './pages/HomePage'
 import MenuPage from './pages/MenuPage'
 import DrinkCustomizePage from './pages/DrinkCustomizePage'
 import CartPage from './pages/CartPage'
+import CheckoutPage from './pages/CheckoutPage'
+import OrderConfirmationPage from './pages/OrderConfirmationPage'
 import Footer from './components/Footer'
 
 function App() {
@@ -18,6 +20,8 @@ function App() {
             <Route path="/menu" element={<MenuPage />} />
             <Route path="/menu/customize/:id" element={<DrinkCustomizePage />} />
             <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
           </Routes>
           <Footer />
         </div>

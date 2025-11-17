@@ -10,7 +10,7 @@ export default function CartPage() {
 
   function calculateTax(): number {
     // Assuming 8.5% tax rate
-    return Math.round(calculateSubtotal() * 0.085)
+    return Math.round(calculateSubtotal() * 0.12)
   }
 
   function calculateTotal(): number {
@@ -195,11 +195,12 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <button
-                  className="w-full bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-4 px-6 rounded-lg text-lg transition-colors duration-200 mb-4"
+                <Link
+                  to="/checkout"
+                  className="block w-full bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-4 px-6 rounded-lg text-lg transition-colors duration-200 mb-4 text-center"
                 >
                   Proceed to Checkout
-                </button>
+                </Link>
 
                 <Link
                   to="/menu"
