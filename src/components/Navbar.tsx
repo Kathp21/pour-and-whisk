@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 
 const navLinks = [
-  { name: 'Home', href: '/' },
-  { name: 'Menu', href: '/menu' },
-  { name: 'About', href: '/about' },
-  { name: 'Contact', href: '.contact' },
+  { name: 'Home', path: '/' },
+  { name: 'Menu', path: '/menu' },
+  { name: 'About', path: '/about' },
+  { name: 'Contact', path: '/contact' },
 ]
 
 export default function Navbar() {
@@ -17,22 +17,20 @@ export default function Navbar() {
   return (
     <nav className="w-full px-6 py-4 md:px-12 bg-background-dark shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <a href='/' className="text-xl md:text-3xl font-serif font-bold text-text-light">
-          <span className="text-text-light">
-            Pour & Whisk
-          </span>
-        </a>
+        <Link to="/" className="text-xl md:text-3xl font-serif font-bold text-text-light">
+          Pour & Whisk
+        </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.name}
-              href={link.href}
+              to={link.path}
               className="text-text-light hover:text-white font-medium transition-colors"
             >
               {link.name}
-            </a>
+            </Link>
           ))}
           
           {/* Desktop Cart Icon */}
@@ -48,11 +46,9 @@ export default function Navbar() {
           </Link>
           
           {/* Desktop Order Now Button */}
-          <a href='/menu' className="bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-2 px-6 rounded-lg text-sm transition-colors duration-200">
-            <span className="text-text-light">
-              Order Now
-            </span>
-          </a>
+          <Link to="/menu" className="bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-2 px-6 rounded-lg text-sm transition-colors duration-200">
+            Order Now
+          </Link>
         </div>
 
         {/* Mobile Cart and Burger */}
@@ -104,24 +100,25 @@ export default function Navbar() {
       >
         <div className="px-2 pt-2 pb-4 space-y-2">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.name}
-              href={link.href}
+              to={link.path}
               onClick={() => setIsMenuOpen(false)}
               className="block px-4 py-2 text-text-light hover:bg-white/10 rounded-md font-medium transition-colors"
             >
               {link.name}
-            </a>
+            </Link>
           ))}
           
           {/* Mobile Order Now Button */}
           <div className="pt-2 px-2">
-            <a
-              href='/menu'
-              className="w-full bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-3 px-6 rounded-lg text-base transition-colors duration-200"
+            <Link
+              to="/menu"
+              onClick={() => setIsMenuOpen(false)}
+              className="w-full bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-3 px-6 rounded-lg text-base transition-colors duration-200 block text-center"
             >
               Order Now
-            </a>
+            </Link>
           </div>
         </div>
       </div>

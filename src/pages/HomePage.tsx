@@ -137,7 +137,7 @@ export default function HomePage() {
       </section>
 
       {/* Visit Us Section */}
-      <section className="py-12 md:py-20 px-6 md:px-12 bg-background-dark">
+      <section className="pb-12 md:pb-20 px-6 md:px-12 bg-background-dark">
         <div className="max-w-7xl mx-auto">
           <h3 className="text-3xl md:text-4xl font-serif font-bold text-favorites text-center mb-8 md:mb-12">
             Visit Us
