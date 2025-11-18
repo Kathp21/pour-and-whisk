@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart, type CartItem } from '../contexts/CartContext'
 
@@ -18,14 +18,28 @@ export default function CheckoutPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showMoreTimeSlots, setShowMoreTimeSlots] = useState(false)
-
-  // Generate time slots starting from current time, incrementing by 15 minutes
-  function generateTimeSlots(): string[] {
+  
+  // Track when user first visits checkout page (order start time)
+  // Initialize immediately so it's available on first render
+  const orderStartTimeRef = useRef<Date>(new Date())
+  
+  // Generate time slots starting from order start time + 15 minutes, incrementing by 15 minutes
+  const allTimeSlots = useMemo(() => {
     const slots: string[] = []
-    const now = new Date()
-    const currentHour = now.getHours()
-    const currentMinute = now.getMinutes()
-    const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Calculate minimum pickup time: order start time + 15 minutes
+    const minPickupTime = new Date(orderStartTimeRef.current)
+    minPickupTime.setMinutes(minPickupTime.getMinutes() + 15)
+    
+    // Round up to next 15-minute interval
+    let minute = Math.ceil(minPickupTime.getMinutes() / 15) * 15
+    let hour = minPickupTime.getHours()
+    if (minute >= 60) {
+      minute = 0
+      hour++
+    }
+    
+    const dayOfWeek = minPickupTime.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     
     // Determine store hours based on day of week
     // Monday-Friday (1-5): 7 AM to 7 PM
@@ -35,15 +49,7 @@ export default function CheckoutPage() {
     const openingMinute = isWeekend ? 0 : 0
     const closingHour = isWeekend ? 20 : 19 // 8 PM = 20:00, 7 PM = 19:00
     
-    // Round up to next 15-minute interval
-    let minute = Math.ceil(currentMinute / 15) * 15
-    let hour = currentHour
-    if (minute >= 60) {
-      minute = 0
-      hour++
-    }
-    
-    // Start from opening time minimum
+    // Ensure we don't start before store opening time
     if (hour < openingHour || (hour === openingHour && minute < openingMinute)) {
       hour = openingHour
       minute = openingMinute
@@ -63,7 +69,7 @@ export default function CheckoutPage() {
     }
     
     return slots
-  }
+  }, []) // Empty dependency array since orderStartTimeRef is initialized once and shouldn't change
 
   function formatTimeDisplay(hour: number, minute: number): string {
     const period = hour >= 12 ? 'PM' : 'AM'
@@ -71,7 +77,6 @@ export default function CheckoutPage() {
     return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
   }
 
-  const allTimeSlots = generateTimeSlots()
   const initialTimeSlots = allTimeSlots.slice(0, 5)
   const remainingTimeSlots = allTimeSlots.slice(5)
   const hasMoreSlots = remainingTimeSlots.length > 0
@@ -271,48 +276,27 @@ export default function CheckoutPage() {
                   
                   {/* Time Slot Options - 3 Column Grid */}
                   <div className="grid grid-cols-3 gap-3">
-                    {/* Now Option */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date()
-                        const roundedMinute = Math.ceil(now.getMinutes() / 15) * 15
-                        const pickupTime = new Date(now)
-                        pickupTime.setMinutes(roundedMinute, 0, 0)
-                        if (roundedMinute >= 60) {
-                          pickupTime.setHours(pickupTime.getHours() + 1)
-                          pickupTime.setMinutes(0)
-                        }
-                        setFormData(prev => ({
-                          ...prev,
-                          pickupTime: pickupTime.toISOString()
-                        }))
-                      }}
-                      className={`p-4 rounded-lg border-2 transition-colors ${
-                        formData.pickupTime && new Date(formData.pickupTime).getTime() <= new Date().getTime() + 10 * 60000
-                          ? 'border-favorites bg-favorites/10 text-text-light'
-                          : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
-                      }`}
-                    >
-                      <div className="font-semibold mb-1">Now</div>
-                      <div className="text-xs">5-10 min</div>
-                      {formData.pickupTime && new Date(formData.pickupTime).getTime() <= new Date().getTime() + 10 * 60000 && (
-                        <svg className="w-4 h-4 text-favorites mx-auto mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-
-                    {/* First 4 Time Slots */}
-                    {initialTimeSlots.slice(0, 4).map((slot, index) => {
+                    {/* First 5 Time Slots */}
+                    {initialTimeSlots.map((slot, index) => {
                       const [timeValue, displayTime] = slot.split('|')
                       const [hour, minute] = timeValue.split(':').map(Number)
-                      const slotDate = new Date()
+                      
+                      // Create date for this slot using order start time's date
+                      const slotDate = orderStartTimeRef.current 
+                        ? new Date(orderStartTimeRef.current)
+                        : new Date()
+                      
                       slotDate.setHours(hour, minute, 0, 0)
-                      // If the time is earlier than current time, set it to tomorrow
-                      if (slotDate.getTime() < new Date().getTime()) {
-                        slotDate.setDate(slotDate.getDate() + 1)
+                      
+                      // If the time is earlier than order start time + 15 min, set it to tomorrow
+                      if (orderStartTimeRef.current) {
+                        const minPickupTime = new Date(orderStartTimeRef.current)
+                        minPickupTime.setMinutes(minPickupTime.getMinutes() + 15)
+                        if (slotDate.getTime() < minPickupTime.getTime()) {
+                          slotDate.setDate(slotDate.getDate() + 1)
+                        }
                       }
+                      
                       const slotISOString = slotDate.toISOString()
                       const isSelected = formData.pickupTime === slotISOString
 
@@ -326,7 +310,7 @@ export default function CheckoutPage() {
                               pickupTime: slotISOString
                             }))
                           }}
-                          className={`p-4 rounded-lg border-2 transition-colors ${
+                          className={`p-4 rounded-lg border-2 transition-colors h-20 flex flex-col items-center justify-center ${
                             isSelected
                               ? 'border-favorites bg-favorites/10 text-text-light'
                               : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
@@ -334,7 +318,7 @@ export default function CheckoutPage() {
                         >
                           <div className="font-medium">{displayTime}</div>
                           {isSelected && (
-                            <svg className="w-4 h-4 text-favorites mx-auto mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-favorites mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           )}
@@ -342,43 +326,97 @@ export default function CheckoutPage() {
                       )
                     })}
 
-                    {/* More Button */}
-                    {hasMoreSlots && (
+                    {/* More Button (only show when not expanded) - appears next to 6PM slot */}
+                    {hasMoreSlots && !showMoreTimeSlots && (
                       <button
                         type="button"
                         onClick={() => setShowMoreTimeSlots(!showMoreTimeSlots)}
-                        className={`p-4 rounded-lg border-2 transition-colors ${
-                          showMoreTimeSlots
-                            ? 'border-favorites bg-favorites/10 text-text-light'
-                            : 'border-text-light/20 hover:border-favorites text-text-light/60 hover:text-favorites'
-                        }`}
+                        className="p-4 rounded-lg border-2 transition-colors h-20 flex flex-col items-center justify-center border-text-light/20 hover:border-favorites text-text-light/60 hover:text-favorites"
                       >
-                        <div className="font-medium">{showMoreTimeSlots ? 'Show Less' : 'More'}</div>
-                        {!showMoreTimeSlots && (
-                          <div className="text-xs mt-1">{remainingTimeSlots.length} more</div>
-                        )}
+                        <div className="font-medium">More</div>
+                        {/* <div className="text-xs mt-1">{remainingTimeSlots.length} more</div> */}
                       </button>
                     )}
-                  </div>
 
-                  {/* More Time Slots (shown when expanded) */}
-                  {showMoreTimeSlots && remainingTimeSlots.length > 0 && (
-                    <div className="grid grid-cols-3 gap-3 mt-3">
-                      {remainingTimeSlots.map((slot, index) => {
-                        const [timeValue, displayTime] = slot.split('|')
-                        const [hour, minute] = timeValue.split(':').map(Number)
-                        const slotDate = new Date()
-                        slotDate.setHours(hour, minute, 0, 0)
-                        // If the time is earlier than current time, set it to tomorrow
-                        if (slotDate.getTime() < new Date().getTime()) {
+                    {/* First remaining slot (6:15PM) - appears in More button's position when expanded */}
+                    {showMoreTimeSlots && remainingTimeSlots.length > 0 && (() => {
+                      const firstRemainingSlot = remainingTimeSlots[0]
+                      const [timeValue, displayTime] = firstRemainingSlot.split('|')
+                      const [hour, minute] = timeValue.split(':').map(Number)
+                      
+                      const slotDate = orderStartTimeRef.current 
+                        ? new Date(orderStartTimeRef.current)
+                        : new Date()
+                      
+                      slotDate.setHours(hour, minute, 0, 0)
+                      
+                      if (orderStartTimeRef.current) {
+                        const minPickupTime = new Date(orderStartTimeRef.current)
+                        minPickupTime.setMinutes(minPickupTime.getMinutes() + 15)
+                        if (slotDate.getTime() < minPickupTime.getTime()) {
                           slotDate.setDate(slotDate.getDate() + 1)
                         }
+                      }
+                      
+                      const slotISOString = slotDate.toISOString()
+                      const isSelected = formData.pickupTime === slotISOString
+
+                      return (
+                        <button
+                          key="first-remaining"
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              pickupTime: slotISOString
+                            }))
+                          }}
+                          className={`p-4 rounded-lg border-2 transition-colors h-20 flex flex-col items-center justify-center ${
+                            isSelected
+                              ? 'border-favorites bg-favorites/10 text-text-light'
+                              : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
+                          }`}
+                        >
+                          <div className="font-medium">{displayTime}</div>
+                          {isSelected && (
+                            <svg className="w-4 h-4 text-favorites mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      )
+                    })()}
+                  </div>
+
+                  {/* More Time Slots (shown when expanded) - remaining slots after the first one */}
+                  {showMoreTimeSlots && remainingTimeSlots.length > 1 && (
+                    <div className="grid grid-cols-3 gap-3 mt-3">
+                      {remainingTimeSlots.slice(1).map((slot, index) => {
+                        const [timeValue, displayTime] = slot.split('|')
+                        const [hour, minute] = timeValue.split(':').map(Number)
+                        
+                        // Create date for this slot using order start time's date
+                        const slotDate = orderStartTimeRef.current 
+                          ? new Date(orderStartTimeRef.current)
+                          : new Date()
+                        
+                        slotDate.setHours(hour, minute, 0, 0)
+                        
+                        // If the time is earlier than order start time + 15 min, set it to tomorrow
+                        if (orderStartTimeRef.current) {
+                          const minPickupTime = new Date(orderStartTimeRef.current)
+                          minPickupTime.setMinutes(minPickupTime.getMinutes() + 15)
+                          if (slotDate.getTime() < minPickupTime.getTime()) {
+                            slotDate.setDate(slotDate.getDate() + 1)
+                          }
+                        }
+                        
                         const slotISOString = slotDate.toISOString()
                         const isSelected = formData.pickupTime === slotISOString
 
                         return (
                           <button
-                            key={index + 4}
+                            key={index + 6}
                             type="button"
                             onClick={() => {
                               setFormData(prev => ({
@@ -386,7 +424,7 @@ export default function CheckoutPage() {
                                 pickupTime: slotISOString
                               }))
                             }}
-                            className={`p-4 rounded-lg border-2 transition-colors ${
+                            className={`p-4 rounded-lg border-2 transition-colors h-20 flex flex-col items-center justify-center ${
                               isSelected
                                 ? 'border-favorites bg-favorites/10 text-text-light'
                                 : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
@@ -394,13 +432,22 @@ export default function CheckoutPage() {
                           >
                             <div className="font-medium">{displayTime}</div>
                             {isSelected && (
-                              <svg className="w-4 h-4 text-favorites mx-auto mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 text-favorites mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
                             )}
                           </button>
                         )
                       })}
+                      
+                      {/* Show Less Button at the end */}
+                      <button
+                        type="button"
+                        onClick={() => setShowMoreTimeSlots(false)}
+                        className="p-4 rounded-lg border-2 transition-colors h-20 flex flex-col items-center justify-center border-text-light/20 hover:border-favorites text-text-light/60 hover:text-favorites"
+                      >
+                        <div className="font-medium">Show Less</div>
+                      </button>
                     </div>
                   )}
                   
@@ -412,7 +459,24 @@ export default function CheckoutPage() {
 
               {/* Payment Information */}
               <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
-                <h2 className="text-xl font-bold text-text-light mb-4">Payment Information</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-text-light">Payment Information</h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        cardNumber: '4242 4242 4242 4242',
+                        cardName: 'Test User',
+                        expiryDate: '12/25',
+                        cvv: '123'
+                      }))
+                    }}
+                    className="text-xs text-favorites hover:text-white underline transition-colors"
+                  >
+                    Use Test Card
+                  </button>
+                </div>
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="cardNumber" className="block text-text-light font-medium mb-2">
