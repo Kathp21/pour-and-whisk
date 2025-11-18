@@ -4,7 +4,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 export default function OrderConfirmationPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { orderNumber, orderType, customerName } = location.state || {}
+  const { orderNumber, orderType, customerName, pickupTime } = location.state || {}
 
   useEffect(() => {
     // If no order data, redirect to menu
@@ -56,11 +56,23 @@ export default function OrderConfirmationPage() {
             {orderType === 'pickup' && (
               <div className="bg-favorites/10 rounded-lg p-4 border border-favorites/30">
                 <p className="text-text-light font-medium mb-2">Pickup Information</p>
+                {pickupTime && (
+                  <p className="text-text-light/80 text-sm mb-2">
+                    <span className="font-semibold">Pickup Time:</span> {new Date(pickupTime).toLocaleString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
                 <p className="text-text-light/80 text-sm">
-                  Your order will be ready for pickup in approximately 15-20 minutes.
+                  Your order will be ready for pickup at the selected time.
                 </p>
                 <p className="text-text-light/80 text-sm mt-2">
-                  Location: 123 Coffee Street, San Francisco, CA 94102
+                  Location: 123 Coffee Street, Vancouver, BC V5K 1R4
                 </p>
               </div>
             )}

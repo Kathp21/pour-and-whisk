@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 
 const navLinks = [
-  { name: 'Home', href: '#' },
-  { name: 'Menu', href: '#' },
-  { name: 'About', href: '#' },
-  { name: 'Contact', href: '#' },
+  { name: 'Home', href: '/' },
+  { name: 'Menu', href: '/menu' },
+  { name: 'About', href: '/about' },
+  { name: 'Contact', href: '.contact' },
 ]
 
 export default function Navbar() {
@@ -17,9 +17,11 @@ export default function Navbar() {
   return (
     <nav className="w-full px-6 py-4 md:px-12 bg-background-dark shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <h1 className="text-xl md:text-3xl font-serif font-bold text-text-light">
-          Pour & Whisk
-        </h1>
+        <a href='/' className="text-xl md:text-3xl font-serif font-bold text-text-light">
+          <span className="text-text-light">
+            Pour & Whisk
+          </span>
+        </a>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8">
@@ -46,9 +48,11 @@ export default function Navbar() {
           </Link>
           
           {/* Desktop Order Now Button */}
-          <button className="bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-2 px-6 rounded-lg text-sm transition-colors duration-200">
-            Order Now
-          </button>
+          <a href='/menu' className="bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-2 px-6 rounded-lg text-sm transition-colors duration-200">
+            <span className="text-text-light">
+              Order Now
+            </span>
+          </a>
         </div>
 
         {/* Mobile Cart and Burger */}
@@ -112,12 +116,12 @@ export default function Navbar() {
           
           {/* Mobile Order Now Button */}
           <div className="pt-2 px-2">
-            <button 
-              onClick={() => setIsMenuOpen(false)}
+            <a
+              href='/menu'
               className="w-full bg-button-primary hover:bg-button-primary/90 text-text-light font-semibold py-3 px-6 rounded-lg text-base transition-colors duration-200"
             >
               Order Now
-            </button>
+            </a>
           </div>
         </div>
       </div>

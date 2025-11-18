@@ -5,17 +5,76 @@ import { useCart, type CartItem } from '../contexts/CartContext'
 export default function CheckoutPage() {
   const navigate = useNavigate()
   const { cartItems, clearCart } = useCart()
-  const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    address: '',
-    city: '',
-    postalCode: '',
+    pickupTime: '',
+    cardNumber: '',
+    cardName: '',
+    expiryDate: '',
+    cvv: '',
     specialInstructions: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showMoreTimeSlots, setShowMoreTimeSlots] = useState(false)
+
+  // Generate time slots starting from current time, incrementing by 15 minutes
+  function generateTimeSlots(): string[] {
+    const slots: string[] = []
+    const now = new Date()
+    const currentHour = now.getHours()
+    const currentMinute = now.getMinutes()
+    const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Determine store hours based on day of week
+    // Monday-Friday (1-5): 7 AM to 7 PM
+    // Saturday-Sunday (0, 6): 8 AM to 8 PM
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const openingHour = isWeekend ? 8 : 7
+    const openingMinute = isWeekend ? 0 : 0
+    const closingHour = isWeekend ? 20 : 19 // 8 PM = 20:00, 7 PM = 19:00
+    
+    // Round up to next 15-minute interval
+    let minute = Math.ceil(currentMinute / 15) * 15
+    let hour = currentHour
+    if (minute >= 60) {
+      minute = 0
+      hour++
+    }
+    
+    // Start from opening time minimum
+    if (hour < openingHour || (hour === openingHour && minute < openingMinute)) {
+      hour = openingHour
+      minute = openingMinute
+    }
+    
+    // Generate slots until closing time
+    while (hour < closingHour || (hour === closingHour && minute === 0)) {
+      const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+      const displayTime = formatTimeDisplay(hour, minute)
+      slots.push(`${timeString}|${displayTime}`)
+      
+      minute += 15
+      if (minute >= 60) {
+        minute = 0
+        hour++
+      }
+    }
+    
+    return slots
+  }
+
+  function formatTimeDisplay(hour: number, minute: number): string {
+    const period = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
+  }
+
+  const allTimeSlots = generateTimeSlots()
+  const initialTimeSlots = allTimeSlots.slice(0, 5)
+  const remainingTimeSlots = allTimeSlots.slice(5)
+  const hasMoreSlots = remainingTimeSlots.length > 0
 
   function calculateSubtotal(): number {
     return cartItems.reduce((sum, item) => sum + item.totalPriceCents, 0)
@@ -26,12 +85,8 @@ export default function CheckoutPage() {
     return Math.round(calculateSubtotal() * 0.12)
   }
 
-  function calculateDeliveryFee(): number {
-    return orderType === 'delivery' ? 300 : 0 // $3.00 delivery fee
-  }
-
   function calculateTotal(): number {
-    return calculateSubtotal() + calculateTax() + calculateDeliveryFee()
+    return calculateSubtotal() + calculateTax()
   }
 
   function formatPrice(cents: number): string {
@@ -79,8 +134,13 @@ export default function CheckoutPage() {
       return
     }
 
-    if (orderType === 'delivery' && (!formData.address || !formData.city || !formData.postalCode)) {
-      alert('Please fill in delivery address information')
+    if (!formData.pickupTime) {
+      alert('Please select a pickup time')
+      return
+    }
+
+    if (!formData.cardNumber || !formData.cardName || !formData.expiryDate || !formData.cvv) {
+      alert('Please fill in all payment information')
       return
     }
 
@@ -95,8 +155,9 @@ export default function CheckoutPage() {
       navigate('/order-confirmation', { 
         state: { 
           orderNumber: `ORD-${Date.now()}`,
-          orderType,
-          customerName: formData.name
+          orderType: 'pickup',
+          customerName: formData.name,
+          pickupTime: formData.pickupTime
         } 
       })
     }, 1500)
@@ -146,44 +207,6 @@ export default function CheckoutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left Column: Order Details & Form */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Order Type Selection */}
-              <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
-                <h2 className="text-xl font-bold text-text-light mb-4">Order Type</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('pickup')}
-                    className={`p-4 rounded-lg border-2 transition-colors ${
-                      orderType === 'pickup'
-                        ? 'border-favorites bg-favorites/10 text-text-light'
-                        : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
-                    }`}
-                  >
-                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <div className="font-semibold">Pickup</div>
-                    <div className="text-sm mt-1">Pick up at store</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOrderType('delivery')}
-                    className={`p-4 rounded-lg border-2 transition-colors ${
-                      orderType === 'delivery'
-                        ? 'border-favorites bg-favorites/10 text-text-light'
-                        : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
-                    }`}
-                  >
-                    <svg className="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    <div className="font-semibold">Delivery</div>
-                    <div className="text-sm mt-1">Delivered to you</div>
-                  </button>
-                </div>
-              </div>
-
               {/* Customer Information */}
               <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
                 <h2 className="text-xl font-bold text-text-light mb-4">Customer Information</h2>
@@ -238,61 +261,226 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Delivery Address (only show if delivery selected) */}
-              {orderType === 'delivery' && (
-                <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
-                  <h2 className="text-xl font-bold text-text-light mb-4">Delivery Address</h2>
-                  <div className="space-y-4">
+              {/* Pickup Time */}
+              <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
+                <h2 className="text-xl font-bold text-text-light mb-4">Pickup Time</h2>
+                <div>
+                  <label className="block text-text-light font-medium mb-3">
+                    Select Pickup Time <span className="text-red-400">*</span>
+                  </label>
+                  
+                  {/* Time Slot Options - 3 Column Grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Now Option */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date()
+                        const roundedMinute = Math.ceil(now.getMinutes() / 15) * 15
+                        const pickupTime = new Date(now)
+                        pickupTime.setMinutes(roundedMinute, 0, 0)
+                        if (roundedMinute >= 60) {
+                          pickupTime.setHours(pickupTime.getHours() + 1)
+                          pickupTime.setMinutes(0)
+                        }
+                        setFormData(prev => ({
+                          ...prev,
+                          pickupTime: pickupTime.toISOString()
+                        }))
+                      }}
+                      className={`p-4 rounded-lg border-2 transition-colors ${
+                        formData.pickupTime && new Date(formData.pickupTime).getTime() <= new Date().getTime() + 10 * 60000
+                          ? 'border-favorites bg-favorites/10 text-text-light'
+                          : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
+                      }`}
+                    >
+                      <div className="font-semibold mb-1">Now</div>
+                      <div className="text-xs">5-10 min</div>
+                      {formData.pickupTime && new Date(formData.pickupTime).getTime() <= new Date().getTime() + 10 * 60000 && (
+                        <svg className="w-4 h-4 text-favorites mx-auto mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+
+                    {/* First 4 Time Slots */}
+                    {initialTimeSlots.slice(0, 4).map((slot, index) => {
+                      const [timeValue, displayTime] = slot.split('|')
+                      const [hour, minute] = timeValue.split(':').map(Number)
+                      const slotDate = new Date()
+                      slotDate.setHours(hour, minute, 0, 0)
+                      // If the time is earlier than current time, set it to tomorrow
+                      if (slotDate.getTime() < new Date().getTime()) {
+                        slotDate.setDate(slotDate.getDate() + 1)
+                      }
+                      const slotISOString = slotDate.toISOString()
+                      const isSelected = formData.pickupTime === slotISOString
+
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              pickupTime: slotISOString
+                            }))
+                          }}
+                          className={`p-4 rounded-lg border-2 transition-colors ${
+                            isSelected
+                              ? 'border-favorites bg-favorites/10 text-text-light'
+                              : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
+                          }`}
+                        >
+                          <div className="font-medium">{displayTime}</div>
+                          {isSelected && (
+                            <svg className="w-4 h-4 text-favorites mx-auto mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </button>
+                      )
+                    })}
+
+                    {/* More Button */}
+                    {hasMoreSlots && (
+                      <button
+                        type="button"
+                        onClick={() => setShowMoreTimeSlots(!showMoreTimeSlots)}
+                        className={`p-4 rounded-lg border-2 transition-colors ${
+                          showMoreTimeSlots
+                            ? 'border-favorites bg-favorites/10 text-text-light'
+                            : 'border-text-light/20 hover:border-favorites text-text-light/60 hover:text-favorites'
+                        }`}
+                      >
+                        <div className="font-medium">{showMoreTimeSlots ? 'Show Less' : 'More'}</div>
+                        {!showMoreTimeSlots && (
+                          <div className="text-xs mt-1">{remainingTimeSlots.length} more</div>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* More Time Slots (shown when expanded) */}
+                  {showMoreTimeSlots && remainingTimeSlots.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3 mt-3">
+                      {remainingTimeSlots.map((slot, index) => {
+                        const [timeValue, displayTime] = slot.split('|')
+                        const [hour, minute] = timeValue.split(':').map(Number)
+                        const slotDate = new Date()
+                        slotDate.setHours(hour, minute, 0, 0)
+                        // If the time is earlier than current time, set it to tomorrow
+                        if (slotDate.getTime() < new Date().getTime()) {
+                          slotDate.setDate(slotDate.getDate() + 1)
+                        }
+                        const slotISOString = slotDate.toISOString()
+                        const isSelected = formData.pickupTime === slotISOString
+
+                        return (
+                          <button
+                            key={index + 4}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                pickupTime: slotISOString
+                              }))
+                            }}
+                            className={`p-4 rounded-lg border-2 transition-colors ${
+                              isSelected
+                                ? 'border-favorites bg-favorites/10 text-text-light'
+                                : 'border-text-light/20 hover:border-text-light/40 text-text-light/60'
+                            }`}
+                          >
+                            <div className="font-medium">{displayTime}</div>
+                            {isSelected && (
+                              <svg className="w-4 h-4 text-favorites mx-auto mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                  
+                  <p className="text-sm text-text-light/60 mt-4">
+                    Orders are typically ready in 15-20 minutes. Please select a time that works for you.
+                  </p>
+                </div>
+              </div>
+
+              {/* Payment Information */}
+              <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
+                <h2 className="text-xl font-bold text-text-light mb-4">Payment Information</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="cardNumber" className="block text-text-light font-medium mb-2">
+                      Card Number <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="cardNumber"
+                      name="cardNumber"
+                      value={formData.cardNumber}
+                      onChange={handleInputChange}
+                      required
+                      maxLength={19}
+                      placeholder="1234 5678 9012 3456"
+                      className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cardName" className="block text-text-light font-medium mb-2">
+                      Cardholder Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="cardName"
+                      name="cardName"
+                      value={formData.cardName}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="John Doe"
+                      className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="address" className="block text-text-light font-medium mb-2">
-                        Street Address <span className="text-red-400">*</span>
+                      <label htmlFor="expiryDate" className="block text-text-light font-medium mb-2">
+                        Expiry Date <span className="text-red-400">*</span>
                       </label>
                       <input
                         type="text"
-                        id="address"
-                        name="address"
-                        value={formData.address}
+                        id="expiryDate"
+                        name="expiryDate"
+                        value={formData.expiryDate}
                         onChange={handleInputChange}
-                        required={orderType === 'delivery'}
+                        required
+                        maxLength={5}
+                        placeholder="MM/YY"
                         className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
-                        placeholder="123 Main Street"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="city" className="block text-text-light font-medium mb-2">
-                          City <span className="text-red-400">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="city"
-                          name="city"
-                          value={formData.city}
-                          onChange={handleInputChange}
-                          required={orderType === 'delivery'}
-                          className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
-                          placeholder="Vancouver"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="zipCode" className="block text-text-light font-medium mb-2">
-                          Postal Code <span className="text-red-400">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="postalCode"
-                          name="postalCode"
-                          value={formData.postalCode}
-                          onChange={handleInputChange}
-                          required={orderType === 'delivery'}
-                          className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
-                          placeholder="V5K 1R4"
-                        />
-                      </div>
+                    <div>
+                      <label htmlFor="cvv" className="block text-text-light font-medium mb-2">
+                        CVV <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="cvv"
+                        name="cvv"
+                        value={formData.cvv}
+                        onChange={handleInputChange}
+                        required
+                        maxLength={4}
+                        placeholder="123"
+                        className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
+                      />
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Special Instructions */}
               <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
@@ -361,12 +549,6 @@ export default function CheckoutPage() {
                     <span>Tax (12%)</span>
                     <span>{formatPrice(calculateTax())}</span>
                   </div>
-                  {orderType === 'delivery' && (
-                    <div className="flex justify-between text-text-light/80">
-                      <span>Delivery Fee</span>
-                      <span>{formatPrice(calculateDeliveryFee())}</span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Total */}
