@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure Stripe elements are interactive */
+[id*="card-element"] iframe,
+.StripeElement iframe,
+[class*="StripeElement"] iframe {
+  pointer-events: auto !important;
+  width: 100% !important;
+}
+
+/* Ensure Stripe element containers are properly sized */
+[class*="StripeElement"] {
+  width: 100%;
+}

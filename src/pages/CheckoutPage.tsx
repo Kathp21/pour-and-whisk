@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart, type CartItem } from '../contexts/CartContext'
+import PaymentRoot from '../components/paymentRoot'
 
 export default function CheckoutPage() {
   const navigate = useNavigate()
@@ -10,18 +11,20 @@ export default function CheckoutPage() {
     email: '',
     phone: '',
     pickupTime: '',
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: '',
     specialInstructions: '',
   })
-  const [isSubmitting, setIsSubmitting] = useState(false)
+
   const [showMoreTimeSlots, setShowMoreTimeSlots] = useState(false)
   
   // Track when user first visits checkout page (order start time)
   // Initialize immediately so it's available on first render
   const orderStartTimeRef = useRef<Date>(new Date())
+  
+  function formatTimeDisplay(hour: number, minute: number): string {
+    const period = hour >= 12 ? 'PM' : 'AM'
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
+    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
+  }
   
   // Generate time slots starting from order start time + 15 minutes, incrementing by 15 minutes
   const allTimeSlots = useMemo(() => {
@@ -71,12 +74,6 @@ export default function CheckoutPage() {
     return slots
   }, []) // Empty dependency array since orderStartTimeRef is initialized once and shouldn't change
 
-  function formatTimeDisplay(hour: number, minute: number): string {
-    const period = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
-    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
-  }
-
   const initialTimeSlots = allTimeSlots.slice(0, 5)
   const remainingTimeSlots = allTimeSlots.slice(5)
   const hasMoreSlots = remainingTimeSlots.length > 0
@@ -122,6 +119,78 @@ export default function CheckoutPage() {
     return parts.join(' • ')
   }
 
+  async function placeOrder(paymentIntentId?: string) {
+    try {
+      // Format pickupTime - extract time in HH:MM format to match backend
+      // When user selects a time slot, setHours() sets it in local time, then toISOString() converts to UTC
+      // We need to extract the original local time that was selected (e.g., 6:15 PM -> "18:15")
+      let formattedPickupTime = formData.pickupTime
+      if (formData.pickupTime && formData.pickupTime.includes('T')) {
+        // Parse the ISO string - JavaScript Date automatically handles UTC to local conversion
+        const date = new Date(formData.pickupTime)
+        // getHours() and getMinutes() return local time, which is what we want
+        // This gives us the time that was originally set with setHours() before toISOString()
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        formattedPickupTime = `${hours}:${minutes}`
+      }
+      
+      const requestBody: any = {
+        type: "PICKUP",
+        customerName: formData.name,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        lines: cartItems.map(item => ({
+          drinkId: item.drinkId,
+          quantity: item.quantity,
+          size: item.size,
+          milk: item.milk,
+          sugarLevel: item.sugarLevel,
+          icedLevel: item.icedLevel,
+        })),
+        tipCents: 0,
+        priceCents: calculateTotal(),
+        pickupTime: formattedPickupTime,
+        specialInstructions: formData.specialInstructions || undefined,
+      }
+      
+      // Include payment intent ID if provided
+      if (paymentIntentId) {
+        requestBody.paymentIntentId = paymentIntentId
+      }
+      
+      console.log('Placing order with data:', JSON.stringify(requestBody, null, 2))
+      
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      })
+      
+      if (!response.ok) {
+        // Try to get error message from response
+        let errorMessage = 'Failed to place order'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorData.error || `Server error: ${response.status} ${response.statusText}`
+          console.error('Order placement error details:', errorData)
+        } catch {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`
+        }
+        throw new Error(errorMessage)
+      }
+      
+      const data = await response.json()
+      console.log('Order placed successfully:', data)
+      return data.orderId || data.id
+    } catch (error) {
+      console.error('Error placing order:', error)
+      throw error
+    }
+  }
+
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -130,44 +199,43 @@ export default function CheckoutPage() {
     }))
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    
-    // Basic validation
-    if (!formData.name || !formData.email || !formData.phone) {
-      alert('Please fill in all required fields')
-      return
-    }
+  // Check if all required checkout fields are filled
+  const isCheckoutReady = 
+    !!(formData.name && formData.email && formData.phone && formData.pickupTime)
 
-    if (!formData.pickupTime) {
-      alert('Please select a pickup time')
-      return
-    }
+  // Generate order ID
+  const currentOrderId = useMemo(() => `ORD-${Date.now()}`, [])
 
-    if (!formData.cardNumber || !formData.cardName || !formData.expiryDate || !formData.cvv) {
-      alert('Please fill in all payment information')
-      return
-    }
-
-    setIsSubmitting(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      // Clear cart after successful order
-      clearCart()
-      setIsSubmitting(false)
-      // Navigate to order confirmation page (or show success message)
-      navigate('/order-confirmation', { 
-        state: { 
-          orderNumber: `ORD-${Date.now()}`,
-          orderType: 'pickup',
+  async function handlePaymentSuccess(paymentIntentId: string) {
+    try {
+      // Place the order in the backend after successful payment
+      const orderId = await placeOrder(paymentIntentId)
+      
+      // Clear cart and navigate to confirmation
+      clearCart();
+      navigate("/order-confirmation", {
+        state: {
+          orderNumber: orderId || currentOrderId,
+          orderType: "pickup",
           customerName: formData.name,
-          pickupTime: formData.pickupTime
-        } 
-      })
-    }, 1500)
+          pickupTime: formData.pickupTime,
+        },
+      });
+    } catch (error) {
+      console.error('Error placing order after payment:', error)
+      // Still navigate to confirmation even if order creation fails
+      // The payment was successful, so we should still show confirmation
+      clearCart();
+      navigate("/order-confirmation", {
+        state: {
+          orderNumber: currentOrderId,
+          orderType: "pickup",
+          customerName: formData.name,
+          pickupTime: formData.pickupTime,
+        },
+      });
+    }
   }
-
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen py-12 md:py-20 px-6 md:px-12">
@@ -208,10 +276,9 @@ export default function CheckoutPage() {
           </h1>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Order Details & Form */}
-            <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Order Details & Form */}
+          <div className="lg:col-span-2 space-y-6">
               {/* Customer Information */}
               <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
                 <h2 className="text-xl font-bold text-text-light mb-4">Customer Information</h2>
@@ -459,91 +526,13 @@ export default function CheckoutPage() {
 
               {/* Payment Information */}
               <div className="bg-background-dark/50 rounded-lg p-6 border border-text-light/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-text-light">Payment Information</h2>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        cardNumber: '4242 4242 4242 4242',
-                        cardName: 'Test User',
-                        expiryDate: '12/25',
-                        cvv: '123'
-                      }))
-                    }}
-                    className="text-xs text-favorites hover:text-white underline transition-colors"
-                  >
-                    Use Test Card
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="cardNumber" className="block text-text-light font-medium mb-2">
-                      Card Number <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="cardNumber"
-                      name="cardNumber"
-                      value={formData.cardNumber}
-                      onChange={handleInputChange}
-                      required
-                      maxLength={19}
-                      placeholder="1234 5678 9012 3456"
-                      className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="cardName" className="block text-text-light font-medium mb-2">
-                      Cardholder Name <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="cardName"
-                      name="cardName"
-                      value={formData.cardName}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="John Doe"
-                      className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="expiryDate" className="block text-text-light font-medium mb-2">
-                        Expiry Date <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="expiryDate"
-                        name="expiryDate"
-                        value={formData.expiryDate}
-                        onChange={handleInputChange}
-                        required
-                        maxLength={5}
-                        placeholder="MM/YY"
-                        className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="cvv" className="block text-text-light font-medium mb-2">
-                        CVV <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="cvv"
-                        name="cvv"
-                        value={formData.cvv}
-                        onChange={handleInputChange}
-                        required
-                        maxLength={4}
-                        placeholder="123"
-                        className="w-full px-4 py-3 bg-background-dark border border-text-light/20 rounded-lg text-text-light placeholder-text-light/40 focus:outline-none focus:border-favorites transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <h2 className="text-xl font-bold text-text-light mb-4">Payment Information</h2>
+                <PaymentRoot
+                  totalPriceCents={calculateTotal()}
+                  currentOrderId={currentOrderId}
+                  isCheckoutReady={isCheckoutReady}
+                  onPaymentSuccess={handlePaymentSuccess}
+                />
               </div>
 
               {/* Special Instructions */}
@@ -621,25 +610,6 @@ export default function CheckoutPage() {
                   <span>{formatPrice(calculateTotal())}</span>
                 </div>
 
-                {/* Place Order Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-button-primary hover:bg-button-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-text-light font-semibold py-4 px-6 rounded-lg text-lg transition-colors duration-200 mb-4"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : (
-                    'Place Order'
-                  )}
-                </button>
-
                 <Link
                   to="/cart"
                   className="block text-center text-text-light/60 hover:text-text-light transition-colors"
@@ -649,9 +619,8 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
-    </div>
   )
 }
 

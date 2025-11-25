@@ -83,8 +83,6 @@ export default function Menu() {
         
         const data: MenuData = await response.json()
         
-        console.log('Menu API response:', data)
-        
         // Check if response is an array (new format) or object (old format)
         if (Array.isArray(data)) {
           // New format: array of category objects
@@ -100,13 +98,7 @@ export default function Menu() {
           setCoffeeItems(coffeeCategory?.items || [])
           setTeaItems(teaCategory?.items || [])
           setPastriesItems(pastriesCategory?.items || [])
-          
-          console.log('Parsed menu items from array:', {
-            matcha: matchaCategory?.items || [],
-            coffee: coffeeCategory?.items || [],
-            tea: teaCategory?.items || [],
-            pastries: pastriesCategory?.items || []
-          })
+
         } else {
           // Old format: object with category keys
           const objData = data as {
